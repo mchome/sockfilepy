@@ -16,7 +16,7 @@ class ProgressBar(object):
         format  Format
         incremental
     """
-    def __init__(self, start=0, end=10, width=12, fill='=', blank='-',
+    def __init__(self, start=0, end=10, width=12, fill='=', blank=' ',
                  format='[%(fill)s>%(blank)s] %(progress)s%% %(speed)s %(eta)s',
                  incremental=True):
         super(ProgressBar, self).__init__()
