@@ -30,8 +30,9 @@ class Express(object):
 
     def SendFile(self):
         filename, filesize = self.FileInfo(self.filepath)
-        trunksize = 1024 * 128
-        filesizebyte = struct.pack('>Q', filesize)
+        trunksize = 1024 * 256
+        filesizebyte = struct.pack('>q', filesize)
+        num_files = struct.pack('>i', 1)
 
         titleid, serial = ciaTitleSerial(self.filepath)
         print('Title ID: ' + titleid + '\tSerial: ' + serial)
@@ -45,14 +46,33 @@ class Express(object):
 
         try:
             f = open(self.filepath, 'rb')
-            l = f.read(trunksize)
-            progress = progressbar.AnimatedProgressBar(end = os.path.getsize(self.filepath) + len(filesizebyte), width = 70)
+            file_buffer = f.read(trunksize)
+
+            progress = progressbar.AnimatedProgressBar(end = os.path.getsize(self.filepath) + len(filesizebyte) + len(num_files),
+                                                       width = 70)
+            s.send(num_files)
+
+            ack = struct.unpack('b', s.recv(1))[0]
+            if ack == 0:
+                print('\n\nSend cancelled by remote')
+                return
+
             s.send(filesizebyte)
-            while l:
-                s.send(l)
-                l = f.read(trunksize)
-                progress + trunksize
-                progress.show_progress()
+
+            while file_buffer:
+                totalsent = 0
+                while totalsent < len(file_buffer):
+                    sent = s.send(file_buffer[totalsent:])
+                    if sent == 0:
+                        raise Exception("socket broken")
+
+                    progress + sent
+                    progress.show_progress()
+
+                    totalsent += sent
+
+                file_buffer = f.read(trunksize)
+
             f.close()
             s.close()
             print('\n\nFile transfer success.')
